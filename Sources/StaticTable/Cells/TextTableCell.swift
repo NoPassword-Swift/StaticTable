@@ -5,6 +5,7 @@
 
 #if os(iOS)
 
+import Color
 import NPKit
 import UIKit
 
@@ -33,6 +34,14 @@ public class TextTableCell: StaticTableCell {
 	public var title: String? {
 		get { self.titleLabel.text }
 		set { self.titleLabel.text = newValue }
+	}
+
+	public func setDestructive(_ isDestructive: Bool) {
+		if isDestructive {
+			self.titleLabel.textColor = Color.systemRed
+		} else {
+			self.titleLabel.textColor = Color.label
+		}
 	}
 }
 

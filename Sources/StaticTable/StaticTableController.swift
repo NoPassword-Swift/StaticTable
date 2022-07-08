@@ -108,6 +108,7 @@ open class StaticTableController: NPTableViewController {
 			case .menu(_):
 				let cell = tableView.dequeueReusableCell(withIdentifier: CellIdentifier.Text, for: indexPath) as! TextTableCell
 				cell.title = row.title
+				cell.setDestructive(row.options.contains(.destructive))
 				cell.accessoryType = .disclosureIndicator
 				return cell
 
