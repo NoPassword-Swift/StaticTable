@@ -1,6 +1,6 @@
 //
 //  SecretValueTableCell.swift
-//  NoPassword.iOS
+//  StaticTable
 //
 
 #if os(iOS)
