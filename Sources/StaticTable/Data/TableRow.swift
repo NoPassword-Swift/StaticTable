@@ -8,11 +8,11 @@
 import CoreCombine
 import UIKit
 
-public protocol SheetSingleValue {
+public protocol SheetSingleValue: CustomLocalizedStringConvertible {
 	static var allCases: [Self] { get }
 
 	var rawValue: String { get }
-	var localizedName: String { get }
+	init?(rawValue: String)
 }
 
 public struct TableRow {

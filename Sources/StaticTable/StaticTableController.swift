@@ -124,13 +124,16 @@ open class StaticTableController: NPTableViewController {
 				let button = CBButton(type: .system)
 				button.titleLabel?.font = Font.body
 				button.titleLabel?.adjustsFontForContentSizeCategory = true
-				button.track(subject: subject)
+				if let value = type.init(rawValue: subject.value) {
+					button.setTitle(value.localizedDescription, for: .normal)
+					button.sizeToFit()
+				}
 				button.onTouchUpInside { button in
 					let alert = UIAlertController(title: nil, message: nil, preferredStyle: .actionSheet)
 					for item in type.allCases {
-						alert.addAction(UIAlertAction(title: item.localizedName, style: .default, handler: { _ in
-							UIView.animate(withDuration: 0, delay: 0, options: .transitionCrossDissolve) {
-								button.setTitle(item.localizedName, for: .normal)
+						alert.addAction(UIAlertAction(title: item.localizedDescription, style: .default, handler: { _ in
+							tableView.performBatchUpdates {
+								button.setTitle(item.localizedDescription, for: .normal)
 								button.sizeToFit()
 							}
 							subject.send(item.rawValue)
