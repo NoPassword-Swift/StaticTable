@@ -1,22 +1,21 @@
 //
-//  ValueTableCell.swift
+//  ValueCell.swift
 //  StaticTable
 //
 
 #if os(iOS)
 
 import Color
+import Combine
 import NPKit
 import UIKit
 
-public class ValueTableCell: StaticTableCell {
-	public let titleLabel = NPLabel()
+public class ValueCell: TableCell {
+	private var titleSubscription: AnyCancellable?
+	private var valueSubscription: AnyCancellable?
 
-	public let valueLabel: UILabel = {
-		let view = NPLabel()
-		view.textColor = Color.secondaryLabel
-		return view
-	}()
+	public let titleLabel = NPLabel()
+	public let valueLabel = NPLabel()
 
 	private var isSmallConstraints: Bool = false
 	private lazy var smallConstraints: [NSLayoutConstraint] = {
@@ -63,6 +62,12 @@ public class ValueTableCell: StaticTableCell {
 		fatalError("init(coder:) has not been implemented")
 	}
 
+	public override func prepareForReuse() {
+		super.prepareForReuse()
+		self.titleSubscription = nil
+		self.valueSubscription = nil
+	}
+
 	public override func updateConstraints() {
 		let textWidth = self.titleLabel.singleLineTextWidth() + self.valueLabel.singleLineTextWidth() + 48 // 20 insets + 8 spacing (system spacing)
 		if textWidth >= self.contentView.frame.width && self.isSmallConstraints {
@@ -84,9 +89,29 @@ public class ValueTableCell: StaticTableCell {
 		set { self.titleLabel.text = newValue }
 	}
 
+	public func bindTitle<P: Publisher>(to publisher: P) where P.Output == String {
+		self.titleSubscription = publisher
+			.receive(on: DispatchQueue.mainIfNeeded)
+			.sink { _ in } receiveValue: { [weak self] newValue in
+				guard let self = self else { return }
+				self.title = newValue
+				self.tableView?.performBatchUpdates {}
+			}
+	}
+
 	public var value: String? {
 		get { self.valueLabel.text }
 		set { self.valueLabel.text = newValue }
+	}
+
+	public func bindValue<P: Publisher>(to publisher: P) where P.Output == String {
+		self.valueSubscription = publisher
+			.receive(on: DispatchQueue.mainIfNeeded)
+			.sink { _ in } receiveValue: { [weak self] newValue in
+				guard let self = self else { return }
+				self.value = newValue
+				self.tableView?.performBatchUpdates {}
+			}
 	}
 }
 

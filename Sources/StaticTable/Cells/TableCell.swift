@@ -1,5 +1,5 @@
 //
-//  StaticTableCell.swift
+//  TableCell.swift
 //  StaticTable
 //
 
@@ -8,14 +8,14 @@
 import Combine
 import UIKit
 
-public class StaticTableCell: UITableViewCell {
-	public var subscriptions = [AnyCancellable]()
+public class TableCell: UITableViewCell {
+	public weak var tableView: UITableView?
+	public var indexPath: IndexPath?
 
 	public override func prepareForReuse() {
 		super.prepareForReuse()
 		self.accessoryView = nil
 		self.accessoryType = .none
-		self.subscriptions = []
 	}
 }
 

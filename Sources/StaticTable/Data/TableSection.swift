@@ -5,27 +5,66 @@
 
 #if os(iOS)
 
-public struct TableSection {
-	public let title: String?
-	public let footer: String?
+import UIKit
 
-	public var count: Int {
-		self.rows.count
+public class TableSection {
+	private let tableView: TableView
+	private weak var data: TableData!
+	private var allRows = [TableRow]()
+	private var visibleRows = [TableRow]()
+
+	public var header: TableString
+	public var footer: TableString
+
+	public var isEnabled: Bool { !self.visibleRows.isEmpty }
+
+	public var numberOfRows: Int { self.visibleRows.count }
+
+	public subscript(index: Int) -> TableRow {
+		self.visibleRows[index]
 	}
 
-	private var rows = [TableRow]()
-
-	public init(_ title: String? = nil, footer: String? = nil) {
-		self.title = title
+	internal init(tableView: TableView, data: TableData, header: TableString, footer: TableString) {
+		self.tableView = tableView
+		self.data = data
+		self.header = header
 		self.footer = footer
 	}
 
-	public subscript(index: Int) -> TableRow {
-		self.rows[index]
+	public func createRow(named name: TableString, kind: TableRow.RowKind, options: TableRow.RowOptions = []) -> TableRow {
+		let row = TableRow(tableView: self.tableView, section: self, name: name, kind: kind, options: options)
+		self.allRows.append(row)
+		return row
 	}
 
-	public mutating func add(row: TableRow) {
-		self.rows.append(row)
+	internal func enable(row: TableRow) {
+		// TODO: This is slow
+		let oldVisible = self.visibleRows
+		self.visibleRows = self.allRows.filter { $0.isEnabled }
+		let diff = self.visibleRows.difference(from: oldVisible, by: ===)
+		self.data.enable(section: self)
+		self.processUpdates(diff: diff)
+	}
+
+	internal func disable(row: TableRow) {
+		// TODO: This is slow
+		let oldVisible = self.visibleRows
+		self.visibleRows = self.allRows.filter { $0.isEnabled }
+		let diff = self.visibleRows.difference(from: oldVisible, by: ===)
+		self.data.disable(section: self)
+		self.processUpdates(diff: diff)
+	}
+
+	internal func processUpdates(diff: CollectionDifference<TableRow>) {
+		guard let section = self.data.sectionNumber(for: self) else { return }
+		for change in diff {
+			switch change {
+				case .insert(let row, _, _):
+					self.tableView.insertRows(at: [IndexPath(row: row, section: section)], with: .automatic)
+				case .remove(let row, _, _):
+					self.tableView.deleteRows(at: [IndexPath(row: row, section: section)], with: .automatic)
+			}
+		}
 	}
 }
 

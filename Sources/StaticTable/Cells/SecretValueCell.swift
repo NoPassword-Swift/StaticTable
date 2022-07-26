@@ -1,20 +1,22 @@
 //
-//  SecretValueTableCell.swift
+//  SecretValueCell.swift
 //  StaticTable
 //
 
 #if os(iOS)
 
 import Color
+import Combine
 import CoreCombine
 import Font
 import NPCombine
 import NPKit
 import UIKit
 
-public class SecretValueTableCell: StaticTableCell {
-	public let titleLabel = NPLabel()
+public class SecretValueCell: TableCell {
+	private var titleSubscription: AnyCancellable?
 
+	public let titleLabel = NPLabel()
 	public let secretLabel: NPLabel = {
 		let view = NPLabel()
 		view.textColor = Color.secondaryLabel
@@ -71,6 +73,11 @@ public class SecretValueTableCell: StaticTableCell {
 		fatalError("init(coder:) has not been implemented")
 	}
 
+	public override func prepareForReuse() {
+		super.prepareForReuse()
+		self.titleSubscription = nil
+	}
+
 	public override func updateConstraints() {
 		let textWidth = self.titleLabel.singleLineTextWidth() + self.secretLabel.singleLineTextWidth() + 48 // 20 insets + 8 spacing (system spacing)
 		if textWidth >= self.contentView.frame.width && self.isSmallConstraints {
@@ -90,6 +97,16 @@ public class SecretValueTableCell: StaticTableCell {
 	public var title: String? {
 		get { self.titleLabel.text }
 		set { self.titleLabel.text = newValue }
+	}
+
+	public func bindTitle<P: Publisher>(to publisher: P) where P.Output == String {
+		self.titleSubscription = publisher
+			.receive(on: DispatchQueue.mainIfNeeded)
+			.sink { _ in } receiveValue: { [weak self] newValue in
+				guard let self = self else { return }
+				self.title = newValue
+				self.tableView?.performBatchUpdates {}
+			}
 	}
 
 	public var secret: String? {

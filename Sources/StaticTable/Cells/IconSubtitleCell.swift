@@ -1,16 +1,21 @@
 //
-//  IconSubtitleTableCell.swift
+//  IconSubtitleCell.swift
 //  StaticTable
 //
 
 #if os(iOS)
 
 import Color
+import Combine
 import Font
 import NPKit
 import UIKit
 
-public class IconSubtitleTableCell: StaticTableCell {
+public class IconSubtitleCell: TableCell {
+	private var iconSubscription: AnyCancellable?
+	private var titleSubscription: AnyCancellable?
+	private var subtitleSubscription: AnyCancellable?
+
 	public let iconView: NPLabel = {
 		let view = NPLabel()
 		view.textAlignment = .center
@@ -96,11 +101,28 @@ public class IconSubtitleTableCell: StaticTableCell {
 		fatalError("init(coder:) has not been implemented")
 	}
 
+	public override func prepareForReuse() {
+		super.prepareForReuse()
+		self.iconSubscription = nil
+		self.titleSubscription = nil
+		self.subtitleSubscription = nil
+	}
+
 	// MARK: Set UI
 
-	public var image: String? {
+	public var icon: String? {
 		get { self.iconView.text }
 		set { self.iconView.text = newValue }
+	}
+
+	public func bindIcon<P: Publisher>(to publisher: P) where P.Output == String {
+		self.iconSubscription = publisher
+			.receive(on: DispatchQueue.mainIfNeeded)
+			.sink { _ in } receiveValue: { [weak self] newValue in
+				guard let self = self else { return }
+				self.icon = newValue
+				self.tableView?.performBatchUpdates {}
+			}
 	}
 
 	public var title: String? {
@@ -108,9 +130,29 @@ public class IconSubtitleTableCell: StaticTableCell {
 		set { self.titleLabel.text = newValue }
 	}
 
+	public func bindTitle<P: Publisher>(to publisher: P) where P.Output == String {
+		self.titleSubscription = publisher
+			.receive(on: DispatchQueue.mainIfNeeded)
+			.sink { _ in } receiveValue: { [weak self] newValue in
+				guard let self = self else { return }
+				self.title = newValue
+				self.tableView?.performBatchUpdates {}
+			}
+	}
+
 	public var subtitle: String? {
 		get { self.subtitleLabel.text }
 		set { self.subtitleLabel.text = newValue }
+	}
+
+	public func bindSubtitle<P: Publisher>(to publisher: P) where P.Output == String {
+		self.subtitleSubscription = publisher
+			.receive(on: DispatchQueue.mainIfNeeded)
+			.sink { _ in } receiveValue: { [weak self] newValue in
+				guard let self = self else { return }
+				self.subtitle = newValue
+				self.tableView?.performBatchUpdates {}
+			}
 	}
 }
 

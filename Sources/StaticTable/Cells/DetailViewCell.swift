@@ -1,16 +1,19 @@
 //
-//  TextDetailViewTableCell.swift
+//  DetailViewCell.swift
 //  StaticTable
 //
 
 #if os(iOS)
 
+import Combine
 import NPKit
 import UIKit
 
-public class TextDetailViewTableCell: StaticTableCell {
+public class DetailViewCell: TableCell {
+	private var titleSubscription: AnyCancellable?
+
 	public let titleLabel = NPLabel()
-	public let detailView = NPView()
+	private let detailView = NPView()
 
 	private var detailContentConstraints = [NSLayoutConstraint]()
 
@@ -26,7 +29,7 @@ public class TextDetailViewTableCell: StaticTableCell {
 			self.contentView.bottomAnchor.constraint(equalToSystemSpacingBelow: self.titleLabel.bottomAnchor, multiplier: 1.5),
 
 			self.detailView.topAnchor.constraint(equalTo: self.contentView.topAnchor),
-			self.detailView.leadingAnchor.constraint(greaterThanOrEqualToSystemSpacingAfter: self.titleLabel.trailingAnchor, multiplier: 1),
+			self.detailView.leadingAnchor.constraint(greaterThanOrEqualToSystemSpacingAfter: self.titleLabel.trailingAnchor, multiplier: 2.5),
 			self.contentView.trailingAnchor.constraint(equalToSystemSpacingAfter: self.detailView.trailingAnchor, multiplier: 2.5),
 			self.contentView.bottomAnchor.constraint(equalTo: self.detailView.bottomAnchor),
 		])
@@ -36,11 +39,30 @@ public class TextDetailViewTableCell: StaticTableCell {
 		fatalError("init(coder:) has not been implemented")
 	}
 
+	public override func prepareForReuse() {
+		super.prepareForReuse()
+		self.titleSubscription = nil
+		self.detail = nil
+	}
+
 	// MARK: Set UI
 
 	public var title: String? {
 		get { self.titleLabel.text }
 		set { self.titleLabel.text = newValue }
+	}
+
+	public func bindTitle<P: Publisher>(to publisher: P) where P.Output == String {
+		self.titleSubscription = publisher
+			.receive(on: DispatchQueue.mainIfNeeded)
+			.sink { [weak self] _ in
+				guard let self = self else { return }
+				self.titleSubscription = nil
+			} receiveValue: { [weak self] newValue in
+				guard let self = self else { return }
+				self.title = newValue
+				self.tableView?.performBatchUpdates {}
+			}
 	}
 
 	public var detail: UIView? {
@@ -55,6 +77,7 @@ public class TextDetailViewTableCell: StaticTableCell {
 				self.detailContentConstraints = newValue.fillSuperview()
 				self.detailContentConstraints.activate()
 			}
+			self.tableView?.performBatchUpdates {}
 		}
 	}
 }
