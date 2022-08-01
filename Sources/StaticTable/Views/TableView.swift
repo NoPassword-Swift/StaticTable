@@ -50,6 +50,8 @@ public class TableView: UITableView {
 
 	public override func performBatchUpdates(_ updates: (() -> Void)?, completion: ((Bool) -> Void)? = nil) {
 		if self.window == nil {
+			updates?()
+			completion?(true)
 			self.needsReloadWhenPutOnScreen = true
 		} else {
 			super.performBatchUpdates(updates, completion: completion)
