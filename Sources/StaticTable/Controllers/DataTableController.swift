@@ -178,6 +178,10 @@ extension DataTableController {
 // MARK: UITableViewDelegate
 extension DataTableController {
 	public override func tableView(_ tableView: UITableView, shouldHighlightRowAt indexPath: IndexPath) -> Bool {
+		if indexPath != tableView.indexPathForSelectedRow {
+			self.deselectRow(animated: true)
+		}
+
 		let row = self.data[indexPath]
 		switch row.kind {
 			case .button, .menu:
@@ -190,6 +194,16 @@ extension DataTableController {
 	public override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
 		let row = self.data[indexPath]
 		switch row.kind {
+			case let .secretValue(value):
+				guard let cell = tableView.cellForRow(at: indexPath) as? SecretValueCell else { return }
+				if !cell.isSecret {
+					DispatchQueue.main.async {
+						tableView.performBatchUpdates {
+							cell.secret = value()
+							cell.setNeedsUpdateConstraints()
+						}
+					}
+				}
 			case let .button(action):
 				tableView.deselectRow(at: indexPath, animated: true)
 				action()
@@ -197,6 +211,48 @@ extension DataTableController {
 				self.navigationController?.pushViewController(factory(), animated: true)
 			default:
 				tableView.deselectRow(at: indexPath, animated: true)
+		}
+	}
+
+	public override func tableView(_ tableView: UITableView, didDeselectRowAt indexPath: IndexPath) {
+		let row = self.data[indexPath]
+		switch row.kind {
+			case .secretValue:
+				guard let cell = tableView.cellForRow(at: indexPath) as? SecretValueCell else { return }
+				if cell.isSecret {
+					DispatchQueue.main.async {
+						tableView.performBatchUpdates {
+							cell.secret = nil
+							cell.setNeedsUpdateConstraints()
+						}
+					}
+				}
+			default: ()
+		}
+	}
+}
+
+extension DataTableController {
+	private func _tableView(_ tableView: UITableView, shouldDeselectRowAt indexPath: IndexPath) -> IndexPath? {
+		let delegate = tableView.delegate
+		if delegate?.responds(to: #selector(tableView(_:willDeselectRowAt:))) == true {
+			return delegate?.tableView!(tableView, willDeselectRowAt: indexPath)
+		}
+		return indexPath
+	}
+
+	private func deselectRow(animated: Bool) {
+		guard let indexPath = self.tableView.indexPathForSelectedRow else { return }
+		if let indexPath = self._tableView(self.tableView, shouldDeselectRowAt: indexPath) {
+			if animated {
+				// FIXME: This is a workaround for `deselectRow(at:animated:)` not animating
+				UIView.animate(withDuration: 0.33, delay: 0) {
+					self.tableView.deselectRow(at: indexPath, animated: animated)
+				}
+			} else {
+				self.tableView.deselectRow(at: indexPath, animated: animated)
+			}
+			self.tableView.delegate?.tableView?(self.tableView, didDeselectRowAt: indexPath)
 		}
 	}
 }
