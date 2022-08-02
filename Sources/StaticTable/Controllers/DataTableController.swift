@@ -8,12 +8,23 @@
 import CoreCombine
 import NPCombine
 import UIKit
+import UniformTypeIdentifiers
 
 open class DataTableController: TableController {
 	public private(set) lazy var data: TableData = TableData(tableView: self.tableView as! TableView)
 
 	public var enableAPI: CBSubject<Bool>?
 	public var breakAPI: CBSubject<Bool>?
+
+	open override func viewDidLoad() {
+		super.viewDidLoad()
+
+		self.tableView.dragDelegate = self
+
+		let tapRecognizer = UITapGestureRecognizer(target: self, action: #selector(backgroundTap(recognizer:)))
+		self.tableView.backgroundView = UIView()
+		self.tableView.backgroundView?.addGestureRecognizer(tapRecognizer)
+	}
 
 	open override func tableView(_ tableView: TableView, cellForRowAt indexPath: IndexPath) -> TableCell {
 		let row = self.data[indexPath]
@@ -230,9 +241,120 @@ extension DataTableController {
 			default: ()
 		}
 	}
+
+	public override func tableView(_ tableView: UITableView, contextMenuConfigurationForRowAt indexPath: IndexPath, point: CGPoint) -> UIContextMenuConfiguration? {
+		let row = self.data[indexPath]
+		if !row.options.contains(.copyable) { return nil }
+		switch row.kind {
+			case .text:
+				return UIContextMenuConfiguration(identifier: indexPath as NSCopying, previewProvider: nil) { _ in
+					let copyAction = UIAction(title: NSLocalizedString("localized.menu.copy", comment: ""), image: UIImage(systemName: "doc.on.doc")) { _ in
+						switch row.name {
+							case .none: UIPasteboard.general.string = ""
+							case let .string(string): UIPasteboard.general.string = string
+						}
+					}
+					return UIMenu(children: [copyAction])
+				}
+
+			case let .value(value):
+				return UIContextMenuConfiguration(identifier: indexPath as NSCopying, previewProvider: nil) { _ in
+					let copyAction = UIAction(title: NSLocalizedString("localized.menu.copy", comment: ""), image: UIImage(systemName: "doc.on.doc")) { _ in
+						switch value {
+							case .none: UIPasteboard.general.string = ""
+							case let .string(string): UIPasteboard.general.string = string
+						}
+					}
+					return UIMenu(children: [copyAction])
+				}
+
+			case let .secretValue(value):
+				return UIContextMenuConfiguration(identifier: indexPath as NSCopying, previewProvider: nil) { _ in
+					let copyAction = UIAction(title: NSLocalizedString("localized.menu.copy", comment: ""), image: UIImage(systemName: "doc.on.doc")) { _ in
+						UIPasteboard.general.string = value()
+					}
+					return UIMenu(children: [copyAction])
+				}
+
+			default:
+				return nil
+		}
+	}
+
+	public override func tableView(_ tableView: UITableView, previewForHighlightingContextMenuWithConfiguration configuration: UIContextMenuConfiguration) -> UITargetedPreview? {
+		guard let indexPath = configuration.identifier as? IndexPath else { return nil }
+		guard let cell = tableView.cellForRow(at: indexPath) as? TableCell else { return nil }
+
+		let parameters = UIPreviewParameters()
+		parameters.backgroundColor = UIColor.clear
+		parameters.visiblePath = UIBezierPath(roundedRect: cell.bounds, cornerRadius: 10)
+		return UITargetedPreview(view: cell, parameters: parameters)
+	}
+}
+
+// MARK: UIScrollViewDelegate
+extension DataTableController {
+	public override func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
+		self.deselectRow(animated: true)
+	}
+}
+
+// MARK: UITableViewDragDelegate
+extension DataTableController: UITableViewDragDelegate {
+	public func tableView(_ tableView: UITableView, itemsForBeginning session: UIDragSession, at indexPath: IndexPath) -> [UIDragItem] {
+		let row = self.data[indexPath]
+		if !row.options.contains(.copyable) { return [] }
+		switch row.kind {
+			case .text:
+				let data: Data
+				switch row.name {
+					case .none: data = Data()
+					case let .string(string):
+						guard let stringData = string.data(using: .utf8) else { return [] }
+						data = stringData
+				}
+				self.deselectRow(animated: true)
+				let itemProvider = NSItemProvider(item: data as NSData, typeIdentifier: UTType.utf8PlainText.identifier)
+				return [UIDragItem(itemProvider: itemProvider)]
+
+			case let .value(value):
+				let data: Data
+				switch value {
+					case .none: data = Data()
+					case let .string(string):
+						guard let stringData = string.data(using: .utf8) else { return [] }
+						data = stringData
+				}
+				self.deselectRow(animated: true)
+				let itemProvider = NSItemProvider(item: data as NSData, typeIdentifier: UTType.utf8PlainText.identifier)
+				return [UIDragItem(itemProvider: itemProvider)]
+
+			case let .secretValue(value):
+				guard let data = value().data(using: .utf8) else { return [] }
+				self.deselectRow(animated: true)
+				let itemProvider = NSItemProvider(item: data as NSData, typeIdentifier: UTType.utf8PlainText.identifier)
+				return [UIDragItem(itemProvider: itemProvider)]
+
+			default:
+				return []
+		}
+	}
+
+	public func tableView(_ tableView: UITableView, dragPreviewParametersForRowAt indexPath: IndexPath) -> UIDragPreviewParameters? {
+		guard let cell = tableView.cellForRow(at: indexPath) as? TableCell else { return nil }
+		let parameters = UIDragPreviewParameters()
+		parameters.backgroundColor = UIColor.clear
+		parameters.visiblePath = UIBezierPath(roundedRect: cell.bounds, cornerRadius: 10)
+		return parameters
+	}
 }
 
 extension DataTableController {
+	@objc
+	private func backgroundTap(recognizer: UITapGestureRecognizer) {
+		self.deselectRow(animated: true)
+	}
+
 	private func _tableView(_ tableView: UITableView, shouldDeselectRowAt indexPath: IndexPath) -> IndexPath? {
 		let delegate = tableView.delegate
 		if delegate?.responds(to: #selector(tableView(_:willDeselectRowAt:))) == true {
