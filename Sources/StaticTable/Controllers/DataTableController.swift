@@ -26,6 +26,11 @@ open class DataTableController: TableController {
 		self.tableView.backgroundView?.addGestureRecognizer(tapRecognizer)
 	}
 
+	open override func viewWillDisappear(_ animated: Bool) {
+		super.viewWillDisappear(animated)
+		self.deselectRow(animated: true)
+	}
+
 	open override func tableView(_ tableView: TableView, cellForRowAt indexPath: IndexPath) -> TableCell {
 		let row = self.data[indexPath]
 		switch row.kind {
@@ -34,6 +39,7 @@ open class DataTableController: TableController {
 				switch row.name {
 					case .none: cell.title = " "
 					case let .string(name): cell.title = name
+					case let .subject(subject): cell.bindTitle(to: subject)
 				}
 				return cell
 			case let .value(value):
@@ -41,10 +47,12 @@ open class DataTableController: TableController {
 				switch row.name {
 					case .none: cell.title = " "
 					case let .string(name): cell.title = name
+					case let .subject(subject): cell.bindTitle(to: subject)
 				}
 				switch value {
 					case .none: cell.value = " "
 					case let .string(value): cell.value = value
+					case let .subject(subject): cell.bindValue(to: subject)
 				}
 				return cell
 			case let .secretValue(secret):
@@ -53,6 +61,7 @@ open class DataTableController: TableController {
 				switch row.name {
 					case .none: cell.title = " "
 					case let .string(name): cell.title = name
+					case let .subject(subject): cell.bindTitle(to: subject)
 				}
 				if row.options.contains(.copyable) && tableView.indexPathForSelectedRow == indexPath {
 					cell.secret = secret()
@@ -65,6 +74,7 @@ open class DataTableController: TableController {
 				switch row.name {
 					case .none: cell.title = " "
 					case let .string(name): cell.title = name
+					case let .subject(subject): cell.bindTitle(to: subject)
 				}
 				if row.options.contains(.destructive) {
 					cell.setStatus(.destructive)
@@ -78,6 +88,7 @@ open class DataTableController: TableController {
 				switch row.name {
 					case .none: cell.title = " "
 					case let .string(name): cell.title = name
+					case let .subject(subject): cell.bindTitle(to: subject)
 				}
 				cell.trackToggle(to: subject)
 				return cell
@@ -86,10 +97,12 @@ open class DataTableController: TableController {
 				switch row.name {
 					case .none: cell.title = " "
 					case let .string(name): cell.title = name
+					case let .subject(subject): cell.bindTitle(to: subject)
 				}
 				switch placeholder {
 					case .none: cell.placeholder = nil
 					case let .string(placeholder): cell.placeholder = placeholder
+					case let .subject(subject): cell.placeholder = subject.value // FIXME: Binding not supported
 				}
 				cell.trackTextField(to: subject)
 				return cell
@@ -98,10 +111,12 @@ open class DataTableController: TableController {
 				switch row.name {
 					case .none: cell.title = " "
 					case let .string(name): cell.title = name
+					case let .subject(subject): cell.bindTitle(to: subject)
 				}
 				switch placeholder {
 					case .none: cell.placeholder = nil
 					case let .string(placeholder): cell.placeholder = placeholder
+					case let .subject(subject): cell.placeholder = subject.value // FIXME: Binding not supported
 				}
 				cell.isSecure = true
 				cell.trackTextField(to: subject)
@@ -111,6 +126,7 @@ open class DataTableController: TableController {
 				switch row.name {
 					case .none: cell.title = " "
 					case let .string(name): cell.title = name
+					case let .subject(subject): cell.bindTitle(to: subject)
 				}
 				if row.options.contains(.destructive) {
 					cell.setStatus(.destructive)
@@ -124,6 +140,7 @@ open class DataTableController: TableController {
 				switch row.name {
 					case .none: cell.title = " "
 					case let .string(name): cell.title = name
+					case let .subject(subject): cell.bindTitle(to: subject)
 				}
 				cell.bindButtonText(to: subject.map { pickerType.init(rawValue: $0)?.localizedDescription ?? "" })
 				cell.buttonAction {
@@ -143,10 +160,12 @@ open class DataTableController: TableController {
 				switch row.name {
 					case .none: cell.title = " "
 					case let .string(name): cell.title = name
+					case let .subject(subject): cell.bindTitle(to: subject)
 				}
 				switch subtitle {
 					case .none: cell.subtitle = " "
 					case let .string(subtitle): cell.subtitle = subtitle
+					case let .subject(subject): cell.bindSubtitle(to: subject)
 				}
 				return cell
 			case let .largeIconSubtitle(icon, subtitle):
@@ -155,10 +174,12 @@ open class DataTableController: TableController {
 				switch row.name {
 					case .none: cell.title = " "
 					case let .string(name): cell.title = name
+					case let .subject(subject): cell.bindTitle(to: subject)
 				}
 				switch subtitle {
 					case .none: cell.subtitle = " "
 					case let .string(subtitle): cell.subtitle = subtitle
+					case let .subject(subject): cell.bindSubtitle(to: subject)
 				}
 				return cell
 		}
@@ -175,6 +196,7 @@ extension DataTableController {
 		switch self.data[section].header {
 			case .none: return nil
 			case let .string(name): return name
+			case let .subject(subject): return subject.value // FIXME: Binding not supported
 		}
 	}
 
@@ -182,6 +204,7 @@ extension DataTableController {
 		switch self.data[section].footer {
 			case .none: return nil
 			case let .string(name): return name
+			case let .subject(subject): return subject.value // FIXME: Binding not supported
 		}
 	}
 }
@@ -252,6 +275,7 @@ extension DataTableController {
 						switch row.name {
 							case .none: UIPasteboard.general.string = ""
 							case let .string(string): UIPasteboard.general.string = string
+							case let .subject(subject): UIPasteboard.general.string = subject.value
 						}
 					}
 					return UIMenu(children: [copyAction])
@@ -263,6 +287,7 @@ extension DataTableController {
 						switch value {
 							case .none: UIPasteboard.general.string = ""
 							case let .string(string): UIPasteboard.general.string = string
+							case let .subject(subject): UIPasteboard.general.string = subject.value
 						}
 					}
 					return UIMenu(children: [copyAction])
@@ -312,6 +337,9 @@ extension DataTableController: UITableViewDragDelegate {
 					case let .string(string):
 						guard let stringData = string.data(using: .utf8) else { return [] }
 						data = stringData
+					case let .subject(subject):
+						guard let stringData = subject.value.data(using: .utf8) else { return [] }
+						data = stringData
 				}
 				self.deselectRow(animated: true)
 				let itemProvider = NSItemProvider(item: data as NSData, typeIdentifier: UTType.utf8PlainText.identifier)
@@ -323,6 +351,9 @@ extension DataTableController: UITableViewDragDelegate {
 					case .none: data = Data()
 					case let .string(string):
 						guard let stringData = string.data(using: .utf8) else { return [] }
+						data = stringData
+					case let .subject(subject):
+						guard let stringData = subject.value.data(using: .utf8) else { return [] }
 						data = stringData
 				}
 				self.deselectRow(animated: true)
