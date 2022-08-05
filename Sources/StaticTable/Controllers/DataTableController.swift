@@ -220,6 +220,10 @@ extension DataTableController {
 		switch row.kind {
 			case .button, .menu:
 				return true
+			case .textField, .secretTextField:
+				guard let cell = tableView.cellForRow(at: indexPath) as? TextFieldCell else { return false }
+				cell.textField.becomeFirstResponder()
+				return false
 			default:
 				return row.options.contains(.selectable)
 		}
