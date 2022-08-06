@@ -107,7 +107,8 @@ open class DataTableController: TableController {
 				cell.trackTextField(to: subject)
 				return cell
 			case let .secretTextField(placeholder, subject):
-				let cell = tableView.dequeueTextField(for: indexPath)
+				let cell = tableView.dequeueSecretTextField(for: indexPath)
+				cell.updateSettings(enableAPI: self.enableAPI, breakAPI: self.breakAPI)
 				switch row.name {
 					case .none: cell.title = " "
 					case let .string(name): cell.title = name
@@ -220,8 +221,12 @@ extension DataTableController {
 		switch row.kind {
 			case .button, .menu:
 				return true
-			case .textField, .secretTextField:
+			case .textField:
 				guard let cell = tableView.cellForRow(at: indexPath) as? TextFieldCell else { return false }
+				cell.textField.becomeFirstResponder()
+				return false
+			case .secretTextField:
+				guard let cell = tableView.cellForRow(at: indexPath) as? SecretTextFieldCell else { return false }
 				cell.textField.becomeFirstResponder()
 				return false
 			default:

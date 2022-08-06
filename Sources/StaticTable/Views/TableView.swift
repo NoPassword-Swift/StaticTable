@@ -17,6 +17,7 @@ public class TableView: UITableView {
 		self.register(DetailViewCell.self, forCellReuseIdentifier: CellIdentifier.detailView.rawValue)
 		self.register(IconSubtitleCell.self, forCellReuseIdentifier: CellIdentifier.iconSubtitle.rawValue)
 		self.register(LargeIconSubtitleCell.self, forCellReuseIdentifier: CellIdentifier.largeIconSubtitle.rawValue)
+		self.register(SecretTextFieldCell.self, forCellReuseIdentifier: CellIdentifier.secretTextField.rawValue)
 		self.register(SecretValueCell.self, forCellReuseIdentifier: CellIdentifier.secretValue.rawValue)
 		self.register(TextCell.self, forCellReuseIdentifier: CellIdentifier.text.rawValue)
 		self.register(TextFieldCell.self, forCellReuseIdentifier: CellIdentifier.textField.rawValue)
@@ -152,6 +153,7 @@ public extension TableView {
 		case detailView
 		case iconSubtitle
 		case largeIconSubtitle
+		case secretTextField
 		case secretValue
 		case text
 		case textField
@@ -173,6 +175,10 @@ public extension TableView {
 
 	func dequeueLargeIconSubtitle(for indexPath: IndexPath) -> LargeIconSubtitleCell {
 		self.dequeueReusableCell(withIdentifier: CellIdentifier.largeIconSubtitle.rawValue, for: indexPath) as! LargeIconSubtitleCell
+	}
+
+	func dequeueSecretTextField(for indexPath: IndexPath) -> SecretTextFieldCell {
+		self.dequeueReusableCell(withIdentifier: CellIdentifier.secretTextField.rawValue, for: indexPath) as! SecretTextFieldCell
 	}
 
 	func dequeueSecretValue(for indexPath: IndexPath) -> SecretValueCell {
