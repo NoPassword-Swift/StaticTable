@@ -31,10 +31,29 @@ public class TableSection {
 		self.footer = footer
 	}
 
+	public func clear() {
+		self.allRows = []
+		self.visibleRows = []
+		self.data.disable(section: self)
+	}
+
 	public func createRow(named name: TableString, kind: TableRow.RowKind, options: TableRow.RowOptions = []) -> TableRow {
 		let row = TableRow(tableView: self.tableView, section: self, name: name, kind: kind, options: options)
 		self.allRows.append(row)
 		return row
+	}
+
+	internal func moveUp(row: TableRow, count: Int = 1) {
+		guard let oldIndex = self.allRows.firstIndex(where: { $0 === row }) else { return }
+		guard oldIndex >= count else { return }
+		self.allRows.swapAt(oldIndex, oldIndex - count)
+
+		// TODO: This is slow
+		let oldVisible = self.visibleRows
+		self.visibleRows = self.allRows.filter { $0.isEnabled }
+		let diff = self.visibleRows.difference(from: oldVisible, by: ===)
+		self.data.enable(section: self)
+		self.processUpdates(diff: diff)
 	}
 
 	internal func enable(row: TableRow) {

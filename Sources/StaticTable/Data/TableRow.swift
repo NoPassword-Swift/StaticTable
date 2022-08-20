@@ -27,6 +27,11 @@ public class TableRow {
 		self.options = options
 	}
 
+	public func moveUp(count: Int = 1) -> Self {
+		self.section.moveUp(row: self, count: count)
+		return self
+	}
+
 	public func enable() {
 		self.isEnabled = true
 		self.section.enable(row: self)
